@@ -7,16 +7,8 @@ import Panel from '@jetbrains/ring-ui/components/panel/panel';
 import Button from '@jetbrains/ring-ui/components/button/button';
 import EmptyWidget, {EmptyWidgetFaces} from '@jetbrains/hub-widget-ui/dist/empty-widget';
 
-import 'file-loader?name=[name].[ext]!../../manifest.json';
-// eslint-disable-line import/no-unresolved
+import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
 import styles from './app.css';
-import sayHello from './say-hello';
-
-const COLOR_OPTIONS = [
-  {key: 'black', label: 'Black'},
-  {key: 'red', label: 'Red'},
-  {key: 'blue', label: 'Blue'}
-];
 
 class Widget extends Component {
   static propTypes = {
@@ -29,78 +21,96 @@ class Widget extends Component {
     const {registerWidgetApi, dashboardApi} = props;
 
     this.state = {
-      isConfiguring: false,
-      selectedColor: null
     };
 
     registerWidgetApi({
-      onConfigure: () => this.setState({isConfiguring: true})
+      onRefresh: () => this.loadStatus()
     });
 
-    this.initialize(dashboardApi);
+    this.loadStatus();
   }
 
-  initialize(dashboardApi) {
-    dashboardApi.readConfig().then(config => {
-      if (!config) {
-        return;
-      }
-      this.setState({selectedColor: config.selectedColor});
+  loadStatus() {
+    this.props.dashboardApi.loadServices('YouTrack').then(youtracks => {
+      var services = [];
+      youtracks.forEach(yt => {
+        if (yt.homeUrl) {
+          services.push({
+            id: yt.id,
+            name: yt.name,
+            url: yt.homeUrl,
+            loading: true
+          });
+        }
+      });
+      this.setState({data: services});
+      this.loadWorkflows();
     });
   }
 
-  saveConfig = async () => {
-    const {selectedColor} = this.state;
-    await this.props.dashboardApi.storeConfig({selectedColor});
-    this.setState({isConfiguring: false});
-  };
+  loadWorkflows() {
+    var {data} = this.state;
+    const fields = 'id,name,title,usages(project(id,ringId,name),isBroken)';
+    const url = 'api/admin/workflows?$top=-1&fields=' + fields;
+    data.forEach(yt => {
+      this.props.dashboardApi.fetch(yt.id, url).then(workflows => {
+        var brokenProjects = {};
+        workflows.forEach(wf => {
+          if (wf.usages.length) {
+            if (wf.usages.find(us => us.isBroken)) {
+              var projects = wf.usages.filter(us => us.isBroken).
+                  map(us => ({name: us.project.name, id: us.project.id}));
+              projects.forEach(p => {
+                if (!brokenProjects[p.id]) {
+                  brokenProjects[p.id] = p;
+                }
+              });
+            }
+          }
+        });
+        yt.brokenProjects = brokenProjects;
+        this.setState({data: data});
+      });
+    });
+  }
 
-  cancelConfig = async () => {
-    this.setState({isConfiguring: false});
-    await this.props.dashboardApi.exitConfigMode();
-    this.initialize(this.props.dashboardApi);
-  };
-
-  changeColor = selectedColor => this.setState({selectedColor});
-
-  renderConfiguration() {
-    const {selectedColor} = this.state;
-
-    return (
-      <div className={styles.widget}>
-        <Select
-          data={COLOR_OPTIONS}
-          selected={selectedColor}
-          onChange={this.changeColor}
-          label="Select text color"
-        />
-        <Panel>
-          <Button primary onClick={this.saveConfig}>{'Save'}</Button>
-          <Button onClick={this.cancelConfig}>{'Cancel'}</Button>
-        </Panel>
-      </div>
-    );
+  renderProjects(yt) {
+    if (yt.brokenProjects) {
+      return (
+        <div>
+          {Object.keys(yt.brokenProjects).map(key => (
+            <h4 key={key}>{yt.brokenProjects[key].name}</h4>
+          ))}
+        </div>
+      )
+    } else {
+      return (
+        <p>OK!</p>
+      )
+    };
   }
 
   render() {
-    const {selectedColor, isConfiguring} = this.state;
+    const {data} = this.state;
 
-    if (isConfiguring) {
-      return this.renderConfiguration();
+    if (data) {
+      return (
+        <div className={styles.widget}>
+          {data.map(yt => (
+            <div>
+              <h3 key={yt.name}>{yt.name} ({yt.url})</h3>
+              {this.renderProjects(yt)}
+            </div>
+          ))}
+        </div>
+      );
+    } else {
+      return (
+        <div className={styles.widget}>
+          <h1>Loading...</h1>
+        </div>
+      );
     }
-
-    return (
-      <div className={styles.widget}>
-        {selectedColor
-          ? <h1 style={{color: selectedColor.key}}>{sayHello()}</h1>
-          : (
-            <EmptyWidget
-              face={EmptyWidgetFaces.JOY}
-              message={'Select "Edit..." option in widget dropdown to configure text color'}
-            />
-          )}
-      </div>
-    );
   }
 }
 

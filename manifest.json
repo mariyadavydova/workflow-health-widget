@@ -6,11 +6,12 @@
   "author": "Mariya Davydova <mrs.mariya.davydova@gmail.com>",
   "iconUrl": "images/check.png",
   "dependencies": {
-    "Hub": ">=2018.2"
+    "Hub": ">=2018.4",
+    "YouTrack": "^2018.4"
   },
   "products": {
-    "Hub": "^2018.2",
-    "YouTrack": "^2018.2"
+    "Hub": "^2018.4",
+    "YouTrack": "^2018.4"
   },
   "view": {
     "fadeOut": false,
