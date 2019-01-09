@@ -1,0 +1,11 @@
+{
+  "key": "workflow-health",
+  "name": "Workflow Health",
+  "version": "1.0.0",
+  "description": " Indicator of errors in workflows for project admin",
+  "author": "Mariya Davydova &lt;mrs.mariya.davydova@gmail.com&gt;",
+  "products": {
+    "Hub": "2018.2",
+    "YouTrack": "2018.2"
+  }
+}
