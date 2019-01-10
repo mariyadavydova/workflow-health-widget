@@ -2,10 +2,6 @@ import DashboardAddons from 'hub-dashboard-addons';
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {render} from 'react-dom';
-import Select from '@jetbrains/ring-ui/components/select/select';
-import Panel from '@jetbrains/ring-ui/components/panel/panel';
-import Button from '@jetbrains/ring-ui/components/button/button';
-import EmptyWidget, {EmptyWidgetFaces} from '@jetbrains/hub-widget-ui/dist/empty-widget';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
 import styles from './app.css';
@@ -29,6 +25,8 @@ class Widget extends Component {
 
     this.loadStatus();
   }
+
+  //-----LOADING-DATA-----//
 
   loadStatus() {
     this.props.dashboardApi.loadServices('YouTrack').then(youtracks => {
@@ -59,19 +57,40 @@ class Widget extends Component {
           if (wf.usages.length) {
             if (wf.usages.find(us => us.isBroken)) {
               var projects = wf.usages.filter(us => us.isBroken).
-                  map(us => ({name: us.project.name, id: us.project.id}));
+                  map(us => ({
+                    name: us.project.name,
+                    id: us.project.id,
+                    wfs: {}
+                  }));
               projects.forEach(p => {
                 if (!brokenProjects[p.id]) {
                   brokenProjects[p.id] = p;
                 }
+                brokenProjects[p.id].wfs[wf.name] = {
+                  title: wf.title,
+                  problems: []
+                };
               });
             }
           }
         });
         yt.brokenProjects = brokenProjects;
+        yt.loading = false;
         this.setState({data: data});
       });
     });
+  }
+
+  //-----RENDERING-DATA-----//
+
+  renderWorkflows(project) {
+    return (
+      <div>
+        {Object.keys(project.wfs).map(key => (
+          <h5 key={key}>{project.wfs[key].title}</h5>
+        ))}
+      </div>
+    )
   }
 
   renderProjects(yt) {
@@ -79,13 +98,20 @@ class Widget extends Component {
       return (
         <div>
           {Object.keys(yt.brokenProjects).map(key => (
-            <h4 key={key}>{yt.brokenProjects[key].name}</h4>
+            <div>
+              <h4 key={key}>{yt.brokenProjects[key].name}</h4>
+              {this.renderWorkflows(yt.brokenProjects[key])}
+            </div>
           ))}
         </div>
       )
+    } else if (yt.loading) {
+      return (
+        <h4>Loading...</h4>
+      )
     } else {
       return (
-        <p>OK!</p>
+        <h3>Horizon is clear!</h3>
       )
     };
   }
@@ -107,7 +133,7 @@ class Widget extends Component {
     } else {
       return (
         <div className={styles.widget}>
-          <h1>Loading...</h1>
+          <h3>Loading...</h3>
         </div>
       );
     }
