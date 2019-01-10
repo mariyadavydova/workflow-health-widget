@@ -2,6 +2,7 @@ import DashboardAddons from 'hub-dashboard-addons';
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {render} from 'react-dom';
+import Link from '@jetbrains/ring-ui/components/link/link';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
 import styles from './app.css';
@@ -179,7 +180,13 @@ class Widget extends Component {
         <div className={styles.widget}>
           {Object.keys(yt.brokenProjects).map(key => (
             <div className={styles.widget} key={key}>
-              <h4>{yt.brokenProjects[key].name}</h4>
+              <Link
+                pseudo={false}
+                target={'_top'}
+                href={yt.url + '/admin/editProject/' + yt.brokenProjects[key].ringId + '?tab=workflow'}
+              >
+                <h4>{yt.brokenProjects[key].name}</h4>
+              </Link>
               {this.renderWorkflows(yt.brokenProjects[key])}
             </div>
           ))}
