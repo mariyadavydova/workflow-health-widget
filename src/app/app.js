@@ -26,6 +26,33 @@ class Widget extends Component {
     this.loadStatus();
   }
 
+  //-----DATA-STRUCTURE-----//
+  /*
+    {
+      <service.id>: {
+        name: <service.name>,
+        url: <service.homeUrl>,
+        loading: <true/false>,
+        brokenProjects: {
+          <project.id>: {
+            name: <project.name>,
+            ringId: <project.ringId>,
+            wfs: {
+              <wf.name>: {
+                title: <wf.title>,
+                loading: <true/false>,
+                problems: [<problem.message>]
+              },
+              <wf.name>: ...
+            }
+          },
+          <project.id>: ...
+        }
+      },
+      <service.id>: ...
+    }
+  */
+
   //-----LOADING-DATA-----//
 
   loadStatus() {
@@ -33,12 +60,11 @@ class Widget extends Component {
       var services = [];
       youtracks.forEach(yt => {
         if (yt.homeUrl) {
-          services.push({
-            id: yt.id,
+          services[yt.id] = {
             name: yt.name,
             url: yt.homeUrl,
             loading: true
-          });
+          };
         }
       });
       this.setState({data: services});
@@ -50,8 +76,8 @@ class Widget extends Component {
     var {data} = this.state;
     const fields = 'id,name,title,usages(project(id,ringId,name),isBroken)';
     const url = 'api/admin/workflows?$top=-1&fields=' + fields;
-    data.forEach(yt => {
-      this.props.dashboardApi.fetch(yt.id, url).then(workflows => {
+    Object.keys(data).forEach(key => {
+      this.props.dashboardApi.fetch(key, url).then(workflows => {
         var brokenProjects = {};
         workflows.forEach(wf => {
           if (wf.usages.length) {
@@ -68,14 +94,15 @@ class Widget extends Component {
                 }
                 brokenProjects[p.id].wfs[wf.name] = {
                   title: wf.title,
+                  loading: true,
                   problems: []
                 };
               });
             }
           }
         });
-        yt.brokenProjects = brokenProjects;
-        yt.loading = false;
+        data[key].brokenProjects = brokenProjects;
+        data[key].loading = false;
         this.setState({data: data});
       });
     });
@@ -83,11 +110,30 @@ class Widget extends Component {
 
   //-----RENDERING-DATA-----//
 
+  renderProblems(wf) {
+    if (wf.loading) {
+      return (
+        <p>Loading...</p>
+      )
+    } else {
+      return (
+        <div className={styles.widget}>
+          {wf.problems.map(problem => (
+            <p>{problem.message}</p>
+          ))}
+        </div>
+      )
+    }
+  }
+
   renderWorkflows(project) {
     return (
-      <div>
+      <div className={styles.widget}>
         {Object.keys(project.wfs).map(key => (
-          <h5 key={key}>{project.wfs[key].title}</h5>
+          <div className={styles.widget} key={key}>
+            <h5 key={key}>{project.wfs[key].title}</h5>
+            {this.renderProblems(project.wfs[key])}
+          </div>
         ))}
       </div>
     )
@@ -96,10 +142,10 @@ class Widget extends Component {
   renderProjects(yt) {
     if (yt.brokenProjects) {
       return (
-        <div>
+        <div className={styles.widget}>
           {Object.keys(yt.brokenProjects).map(key => (
-            <div>
-              <h4 key={key}>{yt.brokenProjects[key].name}</h4>
+            <div className={styles.widget} key={key}>
+              <h4>{yt.brokenProjects[key].name}</h4>
               {this.renderWorkflows(yt.brokenProjects[key])}
             </div>
           ))}
@@ -122,10 +168,10 @@ class Widget extends Component {
     if (data) {
       return (
         <div className={styles.widget}>
-          {data.map(yt => (
-            <div>
-              <h3 key={yt.name}>{yt.name} ({yt.url})</h3>
-              {this.renderProjects(yt)}
+          {Object.keys(data).map(key => (
+            <div className={styles.widget} key={key}>
+              <h3>{data[key].name} ({data[key].url})</h3>
+              {this.renderProjects(data[key])}
             </div>
           ))}
         </div>
