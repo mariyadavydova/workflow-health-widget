@@ -16,8 +16,4 @@ enter your devserver address.
 
 # Licencing
 
-The code of this widget except for the content of the
-`images` directory is licensed with Apache 2.0.
-
-The content of the `images` directory is a part of the
-[breath-icon-theme](https://launchpad.net/ubuntu/+source/breathe-icon-theme).
+The code of this widget is licensed with Apache 2.0.
