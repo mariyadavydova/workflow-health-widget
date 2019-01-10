@@ -175,15 +175,16 @@ class Widget extends Component {
   }
 
   renderProjects(yt) {
-    if (yt.brokenProjects) {
+    if (yt.brokenProjects && Object.keys(yt.brokenProjects).length) {
       return (
         <div className={styles.widget}>
+          <H3>Some projects have workflow errors:</H3>
           {Object.keys(yt.brokenProjects).map(key => (
             <div className={styles.widget} key={key}>
               <Island>
                 <Header border>
                   <Link
-                    pseudo={true}
+                    pseudo={false}
                     target={'_top'}
                     href={this.projectSettingsUrl(yt, key)}
                   >
@@ -207,7 +208,7 @@ class Widget extends Component {
     } else {
       return (
         <div className={styles.widget}>
-          <H2 caps>Horizon is clear!</H2>
+          <H3>All workflows are fine!</H3>
         </div>
       )
     };
