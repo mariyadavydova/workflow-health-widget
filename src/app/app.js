@@ -36,14 +36,16 @@ class Widget extends Component {
         brokenProjects: {
           <project.id>: {
             name: <project.name>,
+            id: <project.id>,
             ringId: <project.ringId>,
             wfs: {
-              <wf.name>: {
+              <wf.id>: {
+                name: <wf.name>,
                 title: <wf.title>,
                 loading: <true/false>,
-                problems: [<problem.message>]
+                problems: [<message>]
               },
-              <wf.name>: ...
+              <wf.id>: ...
             }
           },
           <project.id>: ...
@@ -57,54 +59,86 @@ class Widget extends Component {
 
   loadStatus() {
     this.props.dashboardApi.loadServices('YouTrack').then(youtracks => {
-      var services = [];
+      var data = {};
       youtracks.forEach(yt => {
         if (yt.homeUrl) {
-          services[yt.id] = {
+          data[yt.id] = {
             name: yt.name,
             url: yt.homeUrl,
             loading: true
           };
         }
       });
-      this.setState({data: services});
-      this.loadWorkflows();
+      this.setState({data: data});
+
+      Object.keys(data).forEach(key => {
+        this.loadWorkflows(key);
+      });
     });
   }
 
-  loadWorkflows() {
+  loadWorkflows(key) {
     var {data} = this.state;
     const fields = 'id,name,title,usages(project(id,ringId,name),isBroken)';
     const url = 'api/admin/workflows?$top=-1&fields=' + fields;
-    Object.keys(data).forEach(key => {
-      this.props.dashboardApi.fetch(key, url).then(workflows => {
-        var brokenProjects = {};
-        workflows.forEach(wf => {
-          if (wf.usages.length) {
-            if (wf.usages.find(us => us.isBroken)) {
-              var projects = wf.usages.filter(us => us.isBroken).
-                  map(us => ({
-                    name: us.project.name,
-                    id: us.project.id,
-                    wfs: {}
-                  }));
-              projects.forEach(p => {
-                if (!brokenProjects[p.id]) {
-                  brokenProjects[p.id] = p;
-                }
-                brokenProjects[p.id].wfs[wf.name] = {
-                  title: wf.title,
-                  loading: true,
-                  problems: []
-                };
-              });
-            }
+
+    this.props.dashboardApi.fetch(key, url).then(workflows => {
+      var brokenProjects = {};
+
+      workflows.forEach(wf => {
+        if (wf.usages.length) {
+          if (wf.usages.find(us => us.isBroken)) {
+            var projects = wf.usages.filter(us => us.isBroken).
+                map(us => ({
+                  id: us.project.id,
+                  name: us.project.name,
+                  ringId: us.project.ringId,
+                  wfs: {}
+                }));
+            projects.forEach(p => {
+              if (!brokenProjects[p.id]) {
+                brokenProjects[p.id] = p;
+              }
+              brokenProjects[p.id].wfs[wf.id] = {
+                name: wf.name,
+                title: wf.title,
+                loading: true,
+                problems: []
+              };
+            });
+          }
+        }
+      });
+
+      data[key].brokenProjects = brokenProjects;
+      data[key].loading = false;
+      this.setState({data: data});
+
+      Object.keys(data[key].brokenProjects).forEach(projectId => {
+        this.loadRules(key, projectId);
+      });
+    });
+  }
+
+  loadRules(key, projectId) {
+    var {data} = this.state;
+    const fields = 'rule(id,workflow(id,name)),isBroken,problems(id,message)';
+    const url = 'api/admin/projects/' + projectId +
+          '/workflowRules?$top=-1&fields=' + fields;
+
+    this.props.dashboardApi.fetch(key, url).then(usages => {
+      usages.filter(usage => usage.isBroken).forEach(usage => {
+        var wfId = usage.rule.workflow.id;
+        var problems = data[key].brokenProjects[projectId].wfs[wfId].problems;
+        usage.problems.forEach(problem => {
+          if (problems.indexOf(problem.message) === -1) {
+            problems.push(problem.message);
           }
         });
-        data[key].brokenProjects = brokenProjects;
-        data[key].loading = false;
-        this.setState({data: data});
+        data[key].brokenProjects[projectId].wfs[wfId].loading = false;
       });
+
+      this.setState({data: data});
     });
   }
 
@@ -118,8 +152,8 @@ class Widget extends Component {
     } else {
       return (
         <div className={styles.widget}>
-          {wf.problems.map(problem => (
-            <p>{problem.message}</p>
+          {Object.keys(wf.problems).map(key => (
+            <p key={key}>{wf.problems[key]}</p>
           ))}
         </div>
       )
@@ -131,7 +165,7 @@ class Widget extends Component {
       <div className={styles.widget}>
         {Object.keys(project.wfs).map(key => (
           <div className={styles.widget} key={key}>
-            <h5 key={key}>{project.wfs[key].title}</h5>
+            <h5 key={key}>{project.wfs[key].title ? project.wfs[key].title : project.wfs[key].name}</h5>
             {this.renderProblems(project.wfs[key])}
           </div>
         ))}
