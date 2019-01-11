@@ -1,7 +1,7 @@
 # Workflow Health
 
-This YouTrack widget which shows project admin if there are errors in workflows
-connected to accessible projects.
+This YouTrack widget which shows project administrators if there are
+configuration errors in workflows attached to their projects.
 
 # Developing
 
@@ -12,7 +12,7 @@ enter your devserver address.
 
 # Packing
 
-1. `npm run dist` to archive all content as ZIP file.
+`npm run dist` to archive all content as ZIP file.
 
 # Licencing
 
