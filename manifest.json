@@ -1,7 +1,7 @@
 {
   "key": "workflow-health",
   "name": "Workflow Health",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Indicator of configuration errors in attached workflows for project admin",
   "author": "Mariya Davydova <mrs.mariya.davydova@gmail.com>",
   "applicationName": "YouTrack",

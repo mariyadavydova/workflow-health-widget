@@ -38,6 +38,9 @@ class Widget extends Component {
         name: <service.name>,
         url: <service.homeUrl>,
         loading: <true/false>,
+        hasPermissions: <true/false>,
+        hasGlobalPermission: <true/false>,
+        permittedProjects: [<project.id>],
         brokenProjects: {
           <project.id>: {
             name: <project.name>,
@@ -70,15 +73,43 @@ class Widget extends Component {
           data[yt.id] = {
             name: yt.name,
             url: yt.homeUrl,
-            loading: true
+            loading: true,
+            hasPermissions: true,
+            hasGlobalPermission: false,
+            permittedProjects: []
           };
         }
       });
       this.setState({data: data});
 
       Object.keys(data).forEach(key => {
-        this.loadWorkflows(key);
+        this.loadPermissions(key);
       });
+    });
+  }
+
+  loadPermissions(key) {
+    var {data} = this.state;
+
+    const fields = 'id,project(id)';
+    const query = 'permission:jetbrains.jetpass.project-update';
+    const url = 'api/rest/users/me/sourcedprojectroles?top=-1' +
+          '&fields=' + fields +
+          '&query=' + query;
+
+    this.props.dashboardApi.fetchHub(url).then(response => {
+      var roles = response.sourcedprojectroles;
+      if (!roles || !roles.length) {
+        data[key].hasPermissions = false;
+        this.setState({data: data});
+      } else {
+        data[key].permittedProjects =
+          [...new Set(roles.map(role => role.project.id))];
+        if (data[key].permittedProjects.indexOf("0") !== -1) {
+          data[key].hasGlobalPermission = true;
+        }
+        this.loadWorkflows(key);
+      }
     });
   }
 
@@ -89,6 +120,8 @@ class Widget extends Component {
 
     this.props.dashboardApi.fetch(key, url).then(workflows => {
       var brokenProjects = {};
+      var hasGlobalPermission = data[key].hasGlobalPermission;
+      var permittedProjects = data[key].permittedProjects;
 
       workflows.forEach(wf => {
         if (wf.usages.length) {
@@ -101,15 +134,17 @@ class Widget extends Component {
                   wfs: {}
                 }));
             projects.forEach(p => {
-              if (!brokenProjects[p.id]) {
-                brokenProjects[p.id] = p;
+              if (hasGlobalPermission || permittedProjects.indexOf(p.ringId) !== -1) {
+                if (!brokenProjects[p.id]) {
+                  brokenProjects[p.id] = p;
+                }
+                brokenProjects[p.id].wfs[wf.id] = {
+                  name: wf.name,
+                  title: wf.title,
+                  loading: true,
+                  problems: []
+                };
               }
-              brokenProjects[p.id].wfs[wf.id] = {
-                name: wf.name,
-                title: wf.title,
-                loading: true,
-                problems: []
-              };
             });
           }
         }
@@ -175,7 +210,19 @@ class Widget extends Component {
   }
 
   renderProjects(yt) {
-    if (yt.brokenProjects && Object.keys(yt.brokenProjects).length) {
+    if (!yt.hasPermissions) {
+      return (
+        <div className={styles.widget}>
+          <H3 caps>You have no project admin permissions here!</H3>
+        </div>
+      )
+    } else if (yt.loading) {
+      return (
+        <div className={styles.widget}>
+          <H3 caps>Loading...</H3>
+        </div>
+      )
+    } else if (yt.brokenProjects && Object.keys(yt.brokenProjects).length) {
       return (
         <div className={styles.widget}>
           <H3>Some projects have workflow errors:</H3>
@@ -199,16 +246,10 @@ class Widget extends Component {
           ))}
         </div>
       )
-    } else if (yt.loading) {
-      return (
-        <div className={styles.widget}>
-          <H3 caps>Loading...</H3>
-        </div>
-      )
     } else {
       return (
         <div className={styles.widget}>
-          <H3>All workflows are fine!</H3>
+          <H3>There are no workflow configuration errors in your projects!</H3>
         </div>
       )
     };
