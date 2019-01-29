@@ -233,23 +233,28 @@ class Widget extends Component {
         </div>
       )
     } else if (yt.brokenProjects && Object.keys(yt.brokenProjects).length) {
+      var projects = Object.entries(yt.brokenProjects).sort((a, b) => {
+        if (a[1].name > b[1].name) return 1;
+        if (a[1].name < b[1].name) return -1;
+        return 0;
+      });
       return (
         <div className={styles.widget}>
-          <H3>Some projects have workflow errors:</H3>
-          {Object.keys(yt.brokenProjects).map(key => (
-            <div className={styles.widget} key={key}>
+          <H3>Some projects have workflow configuration errors:</H3>
+          {projects.map(entry => (
+            <div className={styles.widget} key={entry[0]}>
               <Island>
                 <Header border>
                   <Link
                     pseudo={false}
                     target={'_top'}
-                    href={this.projectSettingsUrl(yt, key)}
+                    href={this.projectSettingsUrl(yt, entry[0])}
                   >
-                    {yt.brokenProjects[key].name}
+                    {entry[1].name}
                   </Link>
                 </Header>
                 <Content>
-                  {this.renderWorkflows(yt.brokenProjects[key])}
+                  {this.renderWorkflows(entry[1])}
                 </Content>
               </Island>
             </div>
@@ -266,12 +271,17 @@ class Widget extends Component {
   }
 
   renderWorkflows(project) {
+    var wfs = Object.entries(project.wfs).sort((a, b) => {
+      if (this.wfTitle(a[1]) > this.wfTitle(b[1])) return 1;
+      if (this.wfTitle(a[1]) < this.wfTitle(b[1])) return -1;
+      return 0;
+    });
     return (
       <div className={styles.widget}>
-        {Object.keys(project.wfs).map(key => (
-          <div className={styles.widget} key={key}>
-            <H3>{this.wfTitle(project.wfs[key])}</H3>
-            {this.renderProblems(project.wfs[key])}
+        {wfs.map(entry => (
+          <div className={styles.widget} key={entry[0]}>
+            <H3>{this.wfTitle(entry[1])}</H3>
+            {this.renderProblems(entry[1])}
           </div>
         ))}
       </div>
@@ -286,11 +296,16 @@ class Widget extends Component {
         </div>
       )
     } else {
+      var problems = Object.entries(wf.problems).sort((a, b) => {
+        if (a[1] > b[1]) return 1;
+        if (a[1] < b[1]) return -1;
+        return 0;
+      });
       return (
         <div className={styles.widget}>
           <ul>
-            {Object.keys(wf.problems).map(key => (
-              <li key={key}><Text>{wf.problems[key]}</Text></li>
+            {problems.map(entry => (
+              <li key={entry[0]}><Text>{entry[1]}</Text></li>
             ))}
           </ul>
         </div>
