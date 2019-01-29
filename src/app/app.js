@@ -32,6 +32,7 @@ class Widget extends Component {
   }
 
   //-----DATA-STRUCTURE-----//
+
   /*
     {
       <service.id>: {
@@ -66,10 +67,18 @@ class Widget extends Component {
   //-----LOADING-DATA-----//
 
   loadStatus() {
-    this.props.dashboardApi.loadServices('YouTrack').then(youtracks => {
+    const fields = 'id,name,applicationName,homeUrl';
+    const query = 'applicationName:YouTrack';
+    const url = 'api/rest/services?top=-1' +
+          '&fields=' + fields +
+          '&query=' + query;
+
+    this.props.dashboardApi.fetchHub(url).then(response => {
+      var youtracks = (response && response.services) || [];
       var data = {};
+
       youtracks.forEach(yt => {
-        if (yt.homeUrl) {
+        if (!!yt.homeUrl) {
           data[yt.id] = {
             name: yt.name,
             url: yt.homeUrl,
@@ -80,6 +89,7 @@ class Widget extends Component {
           };
         }
       });
+
       this.setState({data: data});
 
       Object.keys(data).forEach(key => {
