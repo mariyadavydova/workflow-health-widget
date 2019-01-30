@@ -17,3 +17,55 @@
   margin: 0;
   padding: 0;
 }
+
+.scrollableWrapper {
+  padding: 0px 0px;
+}
+
+.instance-name {
+  font-size: 24px;
+  font-weight: 900;
+  margin-top: 0px;
+  margin-bottom: 5px;
+}
+
+.red-island {
+  background-color: #ffcccc;
+  margin-top: 5px;
+}
+
+.red-island-header {
+  padding: 5px 32px;
+  font-size: 16px;
+}
+
+.red-island-body {
+  font-size: 12px;
+}
+
+.wf-name {
+  margin: 0px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.error-list {
+  margin-top: 0px;
+  padding-left: 14px;
+}
+
+.message-l {
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 0px;
+}
+
+.message-m {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+.message-s {
+  font-size: 12px;
+}

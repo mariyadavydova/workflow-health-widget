@@ -3,34 +3,19 @@ import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {render} from 'react-dom';
 import Link from '@jetbrains/ring-ui/components/link/link';
-import Heading, {H1, H2, H3, H4} from '@jetbrains/ring-ui/components/heading/heading';
 import Island, {Header, Content} from '@jetbrains/ring-ui/components/island/island';
 import Text from '@jetbrains/ring-ui/components/text/text';
 import Tooltip from '@jetbrains/ring-ui/components/tooltip/tooltip';
+import {
+  CancelledIcon,
+  SuccessIcon,
+  ExceptionIcon
+} from '@jetbrains/ring-ui/components/icon';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
 import styles from './app.css';
 
 class Widget extends Component {
-  static propTypes = {
-    dashboardApi: PropTypes.object,
-    registerWidgetApi: PropTypes.func
-  };
-
-  constructor(props) {
-    super(props);
-    const {registerWidgetApi, dashboardApi} = props;
-
-    this.state = {
-    };
-
-    registerWidgetApi({
-      onRefresh: () => this.loadStatus()
-    });
-
-    this.loadStatus();
-  }
-
   //-----DATA-STRUCTURE-----//
 
   /*
@@ -65,6 +50,25 @@ class Widget extends Component {
   */
 
   //-----LOADING-DATA-----//
+
+  static propTypes = {
+    dashboardApi: PropTypes.object,
+    registerWidgetApi: PropTypes.func
+  };
+
+  constructor(props) {
+    super(props);
+    const {registerWidgetApi, dashboardApi} = props;
+
+    this.state = {
+    };
+
+    registerWidgetApi({
+      onRefresh: () => this.loadStatus()
+    });
+
+    this.loadStatus();
+  }
 
   loadStatus() {
     const fields = 'id,name,applicationName,homeUrl';
@@ -201,9 +205,9 @@ class Widget extends Component {
       return (
         <div className={styles.widget}>
           {Object.keys(data).map(key => (
-            <div className={styles.widget} key={key}>
+            <div key={key}>
               <Tooltip title={data[key].url}>
-                <H2>{data[key].name}</H2>
+                <p className={styles['instance-name']}>{data[key].name}</p>
               </Tooltip>
               {this.renderProjects(data[key])}
             </div>
@@ -213,7 +217,7 @@ class Widget extends Component {
     } else {
       return (
         <div className={styles.widget}>
-          <H3 caps>Loading...</H3>
+          <p className={styles['message-l']}>Loading...</p>
         </div>
       );
     }
@@ -222,14 +226,19 @@ class Widget extends Component {
   renderProjects(yt) {
     if (!yt.hasPermissions) {
       return (
-        <div className={styles.widget}>
-          <H3 caps>You have no project admin permissions here!</H3>
+        <div>
+          <CancelledIcon
+            className="ring-icon"
+            color={CancelledIcon.Color.RED}
+            size={CancelledIcon.Size.Size64}
+          />
+          <p className={styles['message-m']}>You have no project admin permissions.</p>
         </div>
       )
     } else if (yt.loading) {
       return (
-        <div className={styles.widget}>
-          <H3 caps>Loading...</H3>
+        <div>
+          <p className={styles['message-m']}>Loading...</p>
         </div>
       )
     } else if (yt.brokenProjects && Object.keys(yt.brokenProjects).length) {
@@ -239,12 +248,16 @@ class Widget extends Component {
         return 0;
       });
       return (
-        <div className={styles.widget}>
-          <H3>Some projects have workflow configuration errors:</H3>
+        <div>
+          <ExceptionIcon
+            className="ring-icon"
+            color={ExceptionIcon.Color.RED}
+            size={ExceptionIcon.Size.Size64}
+          />
           {projects.map(entry => (
             <div className={styles.widget} key={entry[0]}>
-              <Island>
-                <Header border>
+              <Island className={styles['red-island']}>
+                <Header border className={styles['red-island-header']}>
                   <Link
                     pseudo={false}
                     target={'_top'}
@@ -253,7 +266,7 @@ class Widget extends Component {
                     {entry[1].name}
                   </Link>
                 </Header>
-                <Content>
+                <Content className={styles['red-island-body']}>
                   {this.renderWorkflows(entry[1])}
                 </Content>
               </Island>
@@ -263,8 +276,12 @@ class Widget extends Component {
       )
     } else {
       return (
-        <div className={styles.widget}>
-          <H3>There are no workflow configuration errors in your projects!</H3>
+        <div>
+          <SuccessIcon
+            className='ring-icon'
+            color={SuccessIcon.Color.GREEN}
+            size={SuccessIcon.Size.Size64}
+          />
         </div>
       )
     };
@@ -277,10 +294,10 @@ class Widget extends Component {
       return 0;
     });
     return (
-      <div className={styles.widget}>
+      <div>
         {wfs.map(entry => (
           <div className={styles.widget} key={entry[0]}>
-            <H3>{this.wfTitle(entry[1])}</H3>
+            <p className={styles['wf-name']}>{this.wfTitle(entry[1])}</p>
             {this.renderProblems(entry[1])}
           </div>
         ))}
@@ -292,7 +309,7 @@ class Widget extends Component {
     if (wf.loading) {
       return (
         <div className={styles.widget}>
-          <Text info>Loading...</Text>
+          <Text className={styles['message-s']}>Loading...</Text>
         </div>
       )
     } else {
@@ -302,10 +319,12 @@ class Widget extends Component {
         return 0;
       });
       return (
-        <div className={styles.widget}>
-          <ul>
+        <div>
+          <ul className={styles['error-list']}>
             {problems.map(entry => (
-              <li key={entry[0]}><Text>{entry[1]}</Text></li>
+              <li key={entry[0]}>
+                <Text>{entry[1]}</Text>
+              </li>
             ))}
           </ul>
         </div>
