@@ -202,18 +202,26 @@ class Widget extends Component {
     const {data} = this.state;
 
     if (data) {
-      return (
-        <div className={styles.widget}>
-          {Object.keys(data).map(key => (
-            <div key={key}>
-              <Tooltip title={data[key].url}>
-                <p className={styles['instance-name']}>{data[key].name}</p>
-              </Tooltip>
-              {this.renderProjects(data[key])}
-            </div>
-          ))}
-        </div>
-      );
+      if (Object.keys(data).length > 1) {
+        return (
+          <div className={styles.widget}>
+            {Object.keys(data).map(key => (
+              <div key={key}>
+                <Tooltip title={data[key].url}>
+                  <p className={styles['instance-name']}>{data[key].name}</p>
+                </Tooltip>
+                {this.renderProjects(data[key])}
+              </div>
+            ))}
+          </div>
+        );
+      } else {
+        return (
+          <div className={styles.widget}>
+            {this.renderProjects(data[Object.keys(data)[0]])}
+          </div>
+        );
+      }
     } else {
       return (
         <div className={styles.widget}>
@@ -227,12 +235,14 @@ class Widget extends Component {
     if (!yt.hasPermissions) {
       return (
         <div>
-          <CancelledIcon
-            className="ring-icon"
-            color={CancelledIcon.Color.RED}
-            size={CancelledIcon.Size.Size64}
-          />
-          <p className={styles['message-m']}>You have no project admin permissions.</p>
+          <div className={styles['centered-icon']}>
+            <CancelledIcon
+              className="ring-icon"
+              color={CancelledIcon.Color.RED}
+              size={CancelledIcon.Size.Size64}
+            />
+            <p className={styles['message-m']}>You have no project admin permissions.</p>
+          </div>
         </div>
       )
     } else if (yt.loading) {
@@ -249,11 +259,13 @@ class Widget extends Component {
       });
       return (
         <div>
-          <ExceptionIcon
-            className="ring-icon"
-            color={ExceptionIcon.Color.RED}
-            size={ExceptionIcon.Size.Size64}
-          />
+          <div className={styles['centered-icon']}>
+            <ExceptionIcon
+              className="ring-icon"
+              color={ExceptionIcon.Color.RED}
+              size={ExceptionIcon.Size.Size64}
+            />
+          </div>
           {projects.map(entry => (
             <div className={styles.widget} key={entry[0]}>
               <Island className={styles['red-island']}>
@@ -266,7 +278,10 @@ class Widget extends Component {
                     {entry[1].name}
                   </Link>
                 </Header>
-                <Content className={styles['red-island-body']}>
+                <Content
+                  className={styles['red-island-body']}
+                  fade={false}
+                >
                   {this.renderWorkflows(entry[1])}
                 </Content>
               </Island>
@@ -276,7 +291,7 @@ class Widget extends Component {
       )
     } else {
       return (
-        <div>
+        <div className={styles['centered-icon']}>
           <SuccessIcon
             className='ring-icon'
             color={SuccessIcon.Color.GREEN}

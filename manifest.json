@@ -1,9 +1,10 @@
 {
   "key": "workflow-health",
   "name": "Workflow Health",
-  "version": "1.0.0",
-  "description": "Indicator of configuration errors in attached workflows for project admin",
+  "version": "1.0.1",
+  "description": "Workflow configuration errors indicator.",
   "author": "Mariya Davydova <mrs.mariya.davydova@gmail.com>",
+  "homeUrl": "https://github.com/mariyadavydova/workflow-health-widget/issues",
   "applicationName": "YouTrack",
   "dependencies": {
     "Hub": ">=2017.4",
@@ -15,8 +16,8 @@
   },
   "view": {
     "fadeOut": false,
-    "defaultWidth": 1,
-    "defaultHeight": 1
+    "defaultWidth": 2,
+    "defaultHeight": 2
   },
   "capabilities": {
     "topNavigation": true
