@@ -2,18 +2,13 @@ import DashboardAddons from 'hub-dashboard-addons';
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {render} from 'react-dom';
-import Link from '@jetbrains/ring-ui/components/link/link';
-import Island, {Header, Content} from '@jetbrains/ring-ui/components/island/island';
-import Text from '@jetbrains/ring-ui/components/text/text';
-import Tooltip from '@jetbrains/ring-ui/components/tooltip/tooltip';
-import {
-  CancelledIcon,
-  SuccessIcon,
-  ExceptionIcon
-} from '@jetbrains/ring-ui/components/icon';
+import ConfigurableWidget from '@jetbrains/hub-widget-ui/dist/configurable-widget';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
 import styles from './app.css';
+
+import Content from './content';
+import Configuration from './configuration';
 
 class Widget extends Component {
   //-----DATA-STRUCTURE-----//
@@ -27,25 +22,21 @@ class Widget extends Component {
         hasPermissions: <true/false>,
         hasGlobalPermission: <true/false>,
         permittedProjects: [<project.id>],
-        brokenProjects: {
-          <project.id>: {
-            name: <project.name>,
-            id: <project.id>,
-            ringId: <project.ringId>,
-            wfs: {
-              <wf.id>: {
-                name: <wf.name>,
-                title: <wf.title>,
-                loading: <true/false>,
-                problems: [<message>]
-              },
-              <wf.id>: ...
-            }
-          },
-          <project.id>: ...
-        }
-      },
-      <service.id>: ...
+        brokenProjects: [{
+          name: <project.name>,
+          id: <project.id>,
+          ringId: <project.ringId>,
+          wfs: {
+            <wf.id>: {
+              name: <wf.name>,
+              title: <wf.title>,
+              loading: <true/false>,
+              problems: [<message>]
+            },
+            <wf.id>: ...
+          }
+        }]
+      }
     }
   */
 
@@ -58,50 +49,63 @@ class Widget extends Component {
 
   constructor(props) {
     super(props);
-    const {registerWidgetApi} = props;
-
     this.state = {};
-
-    registerWidgetApi({
-      onRefresh: () => this.loadStatus()
-    });
-
-    this.loadStatus();
   }
 
-  loadStatus() {
+  componentDidMount() {
+    this.initialize();
+  }
+
+  initialize() {
+    this.setState({isLoading: true});
+    this.props.dashboardApi.readConfig().then(config => {
+      const isNew = !config;
+      this.setState({isNew});
+      this.loadStatus((config || {}).youTrack);
+    });
+  }
+
+  loadStatus(predefinedYouTrack) {
     const fields = 'id,name,applicationName,homeUrl';
     const query = 'applicationName:YouTrack';
     const url = `api/rest/services?top=-1&fields=${fields}&query=${query}`;
 
     this.props.dashboardApi.fetchHub(url).then(response => {
-      const youtracks = (response && response.services) || [];
-      const data = {};
+      const youTracks = ((response && response.services) || []).
+        filter(youtrack => !!youtrack.homeUrl);
 
-      youtracks.forEach(yt => {
-        if (yt.homeUrl) {
-          data[yt.id] = {
-            name: yt.name,
-            url: yt.homeUrl,
-            loading: true,
-            hasPermissions: true,
-            hasGlobalPermission: false,
-            permittedProjects: []
-          };
-        }
-      });
+      if (youTracks.length > 1) {
+        const selectedYouTrack = predefinedYouTrack
+          ? youTracks.filter(yt => yt.id === predefinedYouTrack.id)[0]
+          : youTracks[0];
+        const shouldSelectYouTrack = !predefinedYouTrack || !selectedYouTrack;
+        this.setState({
+          isConfiguring: shouldSelectYouTrack,
+          isLoading: !shouldSelectYouTrack,
+          selectedYouTrack,
+          youTracks
+        }, () =>
+          !shouldSelectYouTrack && this.loadPermissions(selectedYouTrack.id)
+        );
 
-      this.setState({data});
-
-      Object.keys(data).forEach(key => {
-        this.loadPermissions(key);
-      });
+        this.props.registerWidgetApi({
+          onRefresh: () => this.loadStatus(),
+          onConfigure: () => this.setState({isConfiguring: true})
+        });
+      } else {
+        this.props.registerWidgetApi({
+          onRefresh: () => this.loadStatus()
+        });
+        this.setState({
+          isConfiguring: false,
+          selectedYouTrack: youTracks[0],
+          youTracks
+        }, () => this.loadPermissions(youTracks[0] && youTracks[0].id));
+      }
     });
   }
 
-  loadPermissions(key) {
-    const {data} = this.state;
-
+  loadPermissions(ytServiceId) {
     const fields = 'id,project(id)';
     const query = 'permission:jetbrains.jetpass.project-update';
     const url = `${'api/rest/users/me/sourcedprojectroles?top=-1' +
@@ -111,48 +115,47 @@ class Widget extends Component {
     this.props.dashboardApi.fetchHub(url).then(response => {
       const roles = response.sourcedprojectroles;
       if (!roles || !roles.length) {
-        data[key].hasPermissions = false;
-        this.setState({data});
+        this.setState({hasPermissions: false, isLoading: false});
       } else {
-        data[key].permittedProjects =
+        const permittedProjects =
           [...new Set(roles.map(role => role.project.id))];
-        if (data[key].permittedProjects.indexOf('0') !== -1) {
-          data[key].hasGlobalPermission = true;
-        }
-        this.loadWorkflows(key);
+        this.setState({
+          hasGlobalPermission: permittedProjects.indexOf('0') !== -1,
+          hasPermissions: true,
+          permittedProjects
+        }, () => this.loadWorkflows(ytServiceId));
       }
     });
   }
 
-  loadWorkflows(key) {
-    const {data} = this.state;
+  loadWorkflows(ytServiceId) {
     const fields = 'id,name,title,usages(project(id,ringId,name),isBroken)';
-    const url = `api/admin/workflows?$top=-1&fields=${ fields}`;
+    const url = `api/admin/workflows?$top=-1&fields=${fields}`;
 
-    this.props.dashboardApi.fetch(key, url).then(workflows => {
-      const brokenProjects = {};
-      const hasGlobalPermission = data[key].hasGlobalPermission;
-      const permittedProjects = data[key].permittedProjects;
+    this.props.dashboardApi.fetch(ytServiceId, url).then(workflows => {
+      const brokenProjectsSet = {};
+      const {hasGlobalPermission, permittedProjects} = this.state;
 
-      workflows.forEach(wf => {
-        if (wf.usages.length) {
-          if (wf.usages.find(us => us.isBroken)) {
-            const projects = wf.usages.filter(us => us.isBroken).
-              map(us => ({
-                id: us.project.id,
-                name: us.project.name,
-                ringId: us.project.ringId,
+      workflows.forEach(workflow => {
+        if (workflow.usages.length) {
+          if (workflow.usages.find(usage => usage.isBroken)) {
+            const projects = workflow.usages.filter(usage => usage.isBroken).
+              map(usage => ({
+                id: usage.project.id,
+                name: usage.project.name,
+                ringId: usage.project.ringId,
                 wfs: {}
               }));
-            projects.forEach(p => {
+            projects.forEach(project => {
               if (hasGlobalPermission ||
-                permittedProjects.indexOf(p.ringId) !== -1) {
-                if (!brokenProjects[p.id]) {
-                  brokenProjects[p.id] = p;
+                permittedProjects.indexOf(project.ringId) !== -1) {
+                if (!brokenProjectsSet[project.id]) {
+                  brokenProjectsSet[project.id] = project;
                 }
-                brokenProjects[p.id].wfs[wf.id] = {
-                  name: wf.name,
-                  title: wf.title,
+                brokenProjectsSet[project.id].wfs[workflow.id] = {
+                  id: workflow.id,
+                  name: workflow.name,
+                  title: workflow.title,
                   loading: true,
                   problems: []
                 };
@@ -162,208 +165,83 @@ class Widget extends Component {
         }
       });
 
-      data[key].brokenProjects = brokenProjects;
-      data[key].loading = false;
-      this.setState({data});
+      const brokenProjects = Object.keys(brokenProjectsSet).map(
+        projectId => brokenProjectsSet[projectId]
+      );
+      this.setState({brokenProjects, isLoading: false});
 
-      Object.keys(data[key].brokenProjects).forEach(projectId => {
-        this.loadRules(key, projectId);
+      brokenProjects.forEach(project => {
+        this.loadRules(ytServiceId, project).
+          then(() => this.setState({brokenProjects}));
       });
     });
   }
 
-  loadRules(key, projectId) {
-    const {data} = this.state;
+  loadRules(ytServiceId, project) {
     const fields = 'rule(id,workflow(id,name)),isBroken,problems(id,message)';
-    const url = `api/admin/projects/${ projectId
+    const url = `api/admin/projects/${ project.id
     }/workflowRules?$top=-1&fields=${ fields}`;
 
-    this.props.dashboardApi.fetch(key, url).then(usages => {
+    return this.props.dashboardApi.fetch(ytServiceId, url).then(usages => {
       usages.filter(usage => usage.isBroken).forEach(usage => {
         const wfId = usage.rule.workflow.id;
-        const problems = data[key].brokenProjects[projectId].wfs[wfId].problems;
+        const problems = project.wfs[wfId].problems;
         usage.problems.forEach(problem => {
           if (problems.indexOf(problem.message) === -1) {
             problems.push(problem.message);
           }
         });
-        data[key].brokenProjects[projectId].wfs[wfId].loading = false;
+        project.wfs[wfId].loading = false;
       });
 
-      this.setState({data});
+      return project;
     });
   }
+
+  cancelConfigurationForm = () => {
+    if (this.state.isNew) {
+      this.props.dashboardApi.removeWidget();
+    } else {
+      this.setState({isConfiguring: false});
+    }
+  };
+
+  submitConfigurationForm = youTrack => {
+    this.setState({
+      selectedYouTrack: youTrack,
+      isConfiguring: false,
+      isLoading: true,
+      isNew: false
+    });
+    this.loadStatus(youTrack);
+    this.props.dashboardApi.storeConfig({youTrack});
+  };
+
+  renderContent = () => (
+    <Content
+      brokenProjects={this.state.brokenProjects}
+      hasPermission={this.state.hasPermissions}
+      isLoading={this.state.isLoading}
+      homeUrl={this.state.selectedYouTrack.homeUrl}
+    />
+  );
+
+  renderConfiguration = () => (
+    <Configuration
+      onCancel={this.cancelConfigurationForm}
+      onSave={this.submitConfigurationForm}
+      selectedYouTrack={this.state.selectedYouTrack}
+      youTracks={this.state.youTracks}
+      dashboardApi={this.props.dashboardApi}
+    />
+  );
 
   //-----RENDERING-DATA-----//
 
-  renderProjects(yt) {
-    if (!yt.hasPermissions) {
-      return (
-        <div>
-          <div className={styles['centered-icon']}>
-            <CancelledIcon
-              className="ring-icon"
-              color={CancelledIcon.Color.RED}
-              size={CancelledIcon.Size.Size64}
-            />
-            <p className={styles['message-m']}>
-              {'You have no project admin permissions.'}
-            </p>
-          </div>
-        </div>
-      );
-    } else if (yt.loading) {
-      return (
-        <div>
-          <p className={styles['message-m']}>
-            {'Loading...'}
-          </p>
-        </div>
-      );
-    } else if (yt.brokenProjects && Object.keys(yt.brokenProjects).length) {
-      const projects = Object.entries(yt.brokenProjects).sort((a, b) => {
-        if (a[1].name > b[1].name) {
-          return 1;
-        }
-        if (a[1].name < b[1].name) {
-          return -1;
-        }
-        return 0;
-      });
-      return (
-        <div>
-          <div className={styles['centered-icon']}>
-            <ExceptionIcon
-              className="ring-icon"
-              color={ExceptionIcon.Color.RED}
-              size={ExceptionIcon.Size.Size64}
-            />
-          </div>
-          {projects.map(entry => (
-            <div className={styles.widget} key={entry[0]}>
-              <Island className={styles['red-island']}>
-                <Header border className={styles['red-island-header']}>
-                  <Link
-                    pseudo={false}
-                    target={'_top'}
-                    href={this.projectSettingsUrl(yt, entry[0])}
-                  >
-                    {entry[1].name}
-                  </Link>
-                </Header>
-                <Content
-                  className={styles['red-island-body']}
-                  fade={false}
-                >
-                  {this.renderWorkflows(entry[1])}
-                </Content>
-              </Island>
-            </div>
-          ))}
-        </div>
-      );
-    } else {
-      return (
-        <div className={styles['centered-icon']}>
-          <SuccessIcon
-            className="ring-icon"
-            color={SuccessIcon.Color.GREEN}
-            size={SuccessIcon.Size.Size64}
-          />
-        </div>
-      );
-    }
-  }
-
-  renderWorkflows(project) {
-    const wfs = Object.entries(project.wfs).sort((a, b) => {
-      if (this.wfTitle(a[1]) > this.wfTitle(b[1])) {
-        return 1;
-      }
-      if (this.wfTitle(a[1]) < this.wfTitle(b[1])) {
-        return -1;
-      }
-      return 0;
-    });
-    return (
-      <div>
-        {wfs.map(entry => (
-          <div className={styles.widget} key={entry[0]}>
-            <p className={styles['wf-name']}>{this.wfTitle(entry[1])}</p>
-            {this.renderProblems(entry[1])}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  renderProblems(wf) {
-    if (wf.loading) {
-      return (
-        <div className={styles.widget}>
-          <Text className={styles['message-s']}>
-            {'Loading...'}
-          </Text>
-        </div>
-      );
-    } else {
-      const problems = Object.entries(wf.problems).sort((a, b) => {
-        if (a[1] > b[1]) {
-          return 1;
-        }
-        if (a[1] < b[1]) {
-          return -1;
-        }
-        return 0;
-      });
-      return (
-        <div>
-          <ul className={styles['error-list']}>
-            {problems.map(entry => (
-              <li key={entry[0]}>
-                <Text>{entry[1]}</Text>
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
-    }
-  }
-
-  wfTitle(project) {
-    return project.title ? project.title : project.name;
-  }
-
-  projectSettingsUrl(yt, projectId) {
-    return `${yt.url }/admin/editProject/${
-      yt.brokenProjects[projectId].ringId }?tab=workflow`;
-  }
-
   render() {
-    const {data} = this.state;
+    const {selectedYouTrack} = this.state;
 
-    if (data) {
-      if (Object.keys(data).length > 1) {
-        return (
-          <div className={styles.widget}>
-            {Object.keys(data).map(key => (
-              <div key={key}>
-                <Tooltip title={data[key].url}>
-                  <p className={styles['instance-name']}>{data[key].name}</p>
-                </Tooltip>
-                {this.renderProjects(data[key])}
-              </div>
-            ))}
-          </div>
-        );
-      } else {
-        return (
-          <div className={styles.widget}>
-            {this.renderProjects(data[Object.keys(data)[0]])}
-          </div>
-        );
-      }
-    } else {
+    if (!selectedYouTrack) {
       return (
         <div className={styles.widget}>
           <p className={styles['message-l']}>
@@ -372,6 +250,18 @@ class Widget extends Component {
         </div>
       );
     }
+
+    return (
+      <div className={styles.widget}>
+        <ConfigurableWidget
+          isConfiguring={this.state.isConfiguring}
+          dashboardApi={this.props.dashboardApi}
+          widgetLoader={this.state.isLoading}
+          Configuration={this.renderConfiguration}
+          Content={this.renderContent}
+        />
+      </div>
+    );
   }
 }
 
