@@ -199,9 +199,12 @@ class Widget extends Component {
     });
   }
 
+  removeWidget = () =>
+    this.props.dashboardApi.removeWidget();
+
   cancelConfigurationForm = () => {
     if (this.state.isNew) {
-      this.props.dashboardApi.removeWidget();
+      this.removeWidget();
     } else {
       this.setState({isConfiguring: false});
     }
@@ -224,6 +227,7 @@ class Widget extends Component {
       hasPermission={this.state.hasPermissions}
       isLoading={this.state.isLoading}
       homeUrl={this.state.selectedYouTrack.homeUrl}
+      onRemove={this.removeWidget}
     />
   );
 

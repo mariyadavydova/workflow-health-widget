@@ -4,10 +4,9 @@ import Link from '@jetbrains/ring-ui/components/link/link';
 import Island, {Header, Content as IslandContent} from '@jetbrains/ring-ui/components/island/island';
 import LoaderInline from '@jetbrains/ring-ui/components/loader-inline/loader-inline';
 import Text from '@jetbrains/ring-ui/components/text/text';
+import EmptyWidget, {EmptyWidgetFaces} from '@jetbrains/hub-widget-ui/dist/empty-widget';
 import {
-  CancelledIcon,
-  SuccessIcon,
-  ExceptionIcon
+  SuccessIcon
 } from '@jetbrains/ring-ui/components/icon';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
@@ -15,88 +14,83 @@ import styles from './app.css';
 
 export default class Content extends Component {
 
+  static SortByNameComparator = (a, b) => {
+    const aName = (a.name || '').toLowerCase();
+    const bName = (b.name || '').toLowerCase();
+    if (aName > bName) {
+      return 1;
+    }
+    if (aName < bName) {
+      return -1;
+    }
+    return 0;
+  };
+
   static propTypes = {
     brokenProjects: PropTypes.array,
     hasPermission: PropTypes.bool,
     isLoading: PropTypes.bool,
-    homeUrl: PropTypes.string.isRequired
+    homeUrl: PropTypes.string.isRequired,
+    onRemove: PropTypes.func.isRequired
   };
 
   //-----RENDERING-DATA-----//
 
-  renderProjects() {
-    const {hasPermission, brokenProjects} = this.props;
-
-    if (!hasPermission) {
-      return (
-        <div>
-          <div className={styles['centered-icon']}>
-            <CancelledIcon
-              className="ring-icon"
-              color={CancelledIcon.Color.RED}
-              size={CancelledIcon.Size.Size64}
-            />
-            <p className={styles['message-m']}>
-              {'You have no project admin permissions.'}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    if (brokenProjects && brokenProjects.length) {
-      const projects = brokenProjects.sort((a, b) => {
-        if (a.name > b.name) {
-          return 1;
-        }
-        if (a.name < b.name) {
-          return -1;
-        }
-        return 0;
-      });
-
-      return (
-        <div>
-          <div className={styles['centered-icon']}>
-            <ExceptionIcon
-              className="ring-icon"
-              color={ExceptionIcon.Color.RED}
-              size={ExceptionIcon.Size.Size64}
-            />
-          </div>
-          {projects.map(project => (
-            <div className={styles.widget} key={`project-${project.id}`}>
-              <Island className={styles['red-island']}>
-                <Header border className={styles['red-island-header']}>
-                  <Link
-                    pseudo={false}
-                    target={'_top'}
-                    href={this.projectSettingsUrl(project.ringId)}
-                  >
-                    {project.name}
-                  </Link>
-                </Header>
-                <IslandContent
-                  className={styles['red-island-body']}
-                  fade={false}
-                >
-                  {this.renderWorkflows(project)}
-                </IslandContent>
-              </Island>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
+  renderNoPermissionsMessage() {
     return (
-      <div className={styles['centered-icon']}>
-        <SuccessIcon
-          className="ring-icon"
-          color={SuccessIcon.Color.GREEN}
-          size={SuccessIcon.Size.Size64}
-        />
+      <EmptyWidget
+        face={EmptyWidgetFaces.OK}
+        message={'You have no project admin permissions'}
+      >
+        <Link
+          pseudo
+          onClick={this.props.onRemove}
+        >
+          {'Remove widget'}
+        </Link>
+      </EmptyWidget>
+    );
+  }
+
+  renderListOfProjects(projects) {
+    return (
+      <div>
+        {projects.map(project => (
+          <div className={styles.widget} key={`project-${project.id}`}>
+            <Island className={styles['red-island']}>
+              <Header border className={styles['red-island-header']}>
+                <Link
+                  pseudo={false}
+                  target={'_top'}
+                  href={this.projectSettingsUrl(project.ringId)}
+                >
+                  {project.name}
+                </Link>
+              </Header>
+              <IslandContent
+                className={styles['red-island-body']}
+                fade={false}
+              >
+                {this.renderWorkflows(project)}
+              </IslandContent>
+            </Island>
+          </div>
+        ))}
       </div>
+    );
+  }
+
+  renderSuccessMessage() {
+    return (
+      <EmptyWidget
+        face={EmptyWidgetFaces.HAPPY}
+        message={'Workflows are fine!'}
+      >
+        <SuccessIcon
+          color={SuccessIcon.Color.GREEN}
+          size={SuccessIcon.Size.Size14}
+        />
+      </EmptyWidget>
     );
   }
 
@@ -168,18 +162,21 @@ export default class Content extends Component {
   }
 
   render() {
-    const {isLoading} = this.props;
+    const {
+      isLoading, hasPermission, brokenProjects
+    } = this.props;
 
     if (isLoading) {
-      return (
-        <LoaderInline/>
+      return (<LoaderInline/>);
+    }
+    if (!hasPermission) {
+      return this.renderNoPermissionsMessage();
+    }
+    if (brokenProjects && brokenProjects.length) {
+      return this.renderListOfProjects(
+        brokenProjects.sort(Content.SortByNameComparator)
       );
     }
-
-    return (
-      <div className={styles.widget}>
-        {this.renderProjects()}
-      </div>
-    );
+    return this.renderSuccessMessage();
   }
 }
