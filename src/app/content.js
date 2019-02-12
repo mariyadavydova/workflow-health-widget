@@ -14,9 +14,14 @@ import styles from './app.css';
 
 export default class Content extends Component {
 
-  static SortByNameComparator = (a, b) => {
-    const aName = (a.name || '').toLowerCase();
-    const bName = (b.name || '').toLowerCase();
+  static getName = entity =>
+    (typeof entity === 'object'
+      ? (entity.title || entity.name || '')
+      : (entity || ''));
+
+  static sortByNameComparator = (a, b) => {
+    const aName = Content.getName(a).toLowerCase();
+    const bName = Content.getName(b).toLowerCase();
     if (aName > bName) {
       return 1;
     }
@@ -26,6 +31,27 @@ export default class Content extends Component {
     return 0;
   };
 
+  static getProjectsSortedModel = projects => {
+    return (projects || []).sort(Content.sortByNameComparator).
+      map(withSortedWorkflows);
+
+    function withSortedWorkflows(project) {
+      return Object.assign({}, project, {
+        workflows: Object.keys(project.wfs).
+          map(key => project.wfs[key]).
+          map(withSortedProblems).
+          sort(Content.sortByNameComparator)
+      });
+    }
+
+    function withSortedProblems(workflow) {
+      return Object.assign({}, workflow, {
+        problems: (workflow.problems || []).
+          sort(Content.sortByNameComparator)
+      });
+    }
+  };
+
   static propTypes = {
     brokenProjects: PropTypes.array,
     hasPermission: PropTypes.bool,
@@ -33,6 +59,19 @@ export default class Content extends Component {
     homeUrl: PropTypes.string.isRequired,
     onRemove: PropTypes.func.isRequired
   };
+
+  constructor(props) {
+    super(props);
+    this.state = {projects: []};
+  }
+
+  static getDerivedStateFromProps(props) {
+    return {
+      projects: Content.getProjectsSortedModel(
+        props.brokenProjects
+      )
+    };
+  }
 
   //-----RENDERING-DATA-----//
 
@@ -52,30 +91,26 @@ export default class Content extends Component {
     );
   }
 
-  renderListOfProjects(projects) {
+  renderProject(project) {
     return (
-      <div>
-        {projects.map(project => (
-          <div className={styles.widget} key={`project-${project.id}`}>
-            <Island className={styles['red-island']}>
-              <Header border className={styles['red-island-header']}>
-                <Link
-                  pseudo={false}
-                  target={'_top'}
-                  href={this.projectSettingsUrl(project.ringId)}
-                >
-                  {project.name}
-                </Link>
-              </Header>
-              <IslandContent
-                className={styles['red-island-body']}
-                fade={false}
-              >
-                {this.renderWorkflows(project)}
-              </IslandContent>
-            </Island>
-          </div>
-        ))}
+      <div key={`project-${project.id}`}>
+        <Island className={styles['red-island']}>
+          <Header border className={styles['red-island-header']}>
+            <Link
+              pseudo={false}
+              target={'_top'}
+              href={this.projectSettingsUrl(project.ringId)}
+            >
+              {project.name}
+            </Link>
+          </Header>
+          <IslandContent
+            className={styles['red-island-body']}
+            fade={false}
+          >
+            {this.renderWorkflows(project.workflows)}
+          </IslandContent>
+        </Island>
       </div>
     );
   }
@@ -94,24 +129,12 @@ export default class Content extends Component {
     );
   }
 
-  renderWorkflows(project) {
-    const workflows = Object.keys(project.wfs).
-      map(key => project.wfs[key]).
-      sort((a, b) => {
-        if (this.wfTitle(a) > this.wfTitle(b)) {
-          return 1;
-        }
-        if (this.wfTitle(a) < this.wfTitle(b)) {
-          return -1;
-        }
-        return 0;
-      });
-
+  renderWorkflows(workflows) {
     return (
       <div>
         {workflows.map(workflow => (
           <div className={styles.widget} key={`workflow-${workflow.id}`}>
-            <p className={styles['wf-name']}>{this.wfTitle(workflow)}</p>
+            <p className={styles['wf-name']}>{Content.getName(workflow)}</p>
             {this.renderProblems(workflow)}
           </div>
         ))}
@@ -119,33 +142,21 @@ export default class Content extends Component {
     );
   }
 
-  renderProblems(wf) {
-    if (wf.loading) {
+  renderProblems(workflow) {
+    if (workflow.loading) {
       return (
-        <div className={styles.widget}>
-          <Text className={styles['message-s']}>
-            {'Loading...'}
-          </Text>
-        </div>
+        <Text className={styles['message-s']}>
+          {'Loading...'}
+        </Text>
       );
     }
-
-    const problems = Object.entries(wf.problems).sort((a, b) => {
-      if (a[1] > b[1]) {
-        return 1;
-      }
-      if (a[1] < b[1]) {
-        return -1;
-      }
-      return 0;
-    });
 
     return (
       <div>
         <ul className={styles['error-list']}>
-          {problems.map(entry => (
-            <li key={entry[0]}>
-              <Text>{entry[1]}</Text>
+          {workflow.problems.map(problem => (
+            <li key={`problem-${problem.id}`}>
+              <Text>{problem.message}</Text>
             </li>
           ))}
         </ul>
@@ -153,18 +164,13 @@ export default class Content extends Component {
     );
   }
 
-  wfTitle(project) {
-    return project.title ? project.title : project.name;
-  }
-
   projectSettingsUrl(projectRingId) {
     return `${this.props.homeUrl}/admin/editProject/${projectRingId}?tab=workflow`;
   }
 
   render() {
-    const {
-      isLoading, hasPermission, brokenProjects
-    } = this.props;
+    const {isLoading, hasPermission} = this.props;
+    const {projects} = this.state;
 
     if (isLoading) {
       return (<LoaderInline/>);
@@ -172,9 +178,13 @@ export default class Content extends Component {
     if (!hasPermission) {
       return this.renderNoPermissionsMessage();
     }
-    if (brokenProjects && brokenProjects.length) {
-      return this.renderListOfProjects(
-        brokenProjects.sort(Content.SortByNameComparator)
+    if (projects && projects.length) {
+      return (
+        <div>
+          {projects.map(
+            project => this.renderProject(project)
+          )}
+        </div>
       );
     }
     return this.renderSuccessMessage();

@@ -187,9 +187,12 @@ class Widget extends Component {
       usages.filter(usage => usage.isBroken).forEach(usage => {
         const wfId = usage.rule.workflow.id;
         const problems = project.wfs[wfId].problems;
-        usage.problems.forEach(problem => {
-          if (problems.indexOf(problem.message) === -1) {
-            problems.push(problem.message);
+        usage.problems.forEach(usageProblem => {
+          const exists = problems.some(
+            problem => problem.id === usageProblem.id
+          );
+          if (!exists) {
+            problems.push(usageProblem);
           }
         });
         project.wfs[wfId].loading = false;
