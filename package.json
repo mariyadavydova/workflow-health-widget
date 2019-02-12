@@ -29,7 +29,7 @@
   "dependencies": {
     "@jetbrains/icons": "1.24.3",
     "@jetbrains/logos": "1.0.5",
-    "@jetbrains/ring-ui": "1.0.29",
+    "@jetbrains/ring-ui": "1.0.35",
     "@babel/core": "7.2.0",
     "@babel/polyfill": "7.0.0",
     "@jetbrains/babel-preset-jetbrains": "2.1.2",
@@ -49,7 +49,7 @@
     "webpack": "3.12.0",
     "webpack-dev-server": "2.11.3",
     "hub-dashboard-addons": "0.2.0",
-    "@jetbrains/hub-widget-ui": "1.0.24"
+    "@jetbrains/hub-widget-ui": "1.0.26"
   },
   "devDependencies": {
     "@jetbrains/generator-ring-ui": "1.0.27",
