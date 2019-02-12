@@ -2,6 +2,7 @@ import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import Link from '@jetbrains/ring-ui/components/link/link';
 import Island, {Header, Content as IslandContent} from '@jetbrains/ring-ui/components/island/island';
+import LoaderInline from '@jetbrains/ring-ui/components/loader-inline/loader-inline';
 import Text from '@jetbrains/ring-ui/components/text/text';
 import {
   CancelledIcon,
@@ -171,11 +172,7 @@ export default class Content extends Component {
 
     if (isLoading) {
       return (
-        <div className={styles.widget}>
-          <p className={styles['message-l']}>
-            {'Loading...'}
-          </p>
-        </div>
+        <LoaderInline/>
       );
     }
 

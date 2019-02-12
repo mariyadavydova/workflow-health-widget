@@ -3,6 +3,7 @@ import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {render} from 'react-dom';
 import ConfigurableWidget from '@jetbrains/hub-widget-ui/dist/configurable-widget';
+import LoaderInline from '@jetbrains/ring-ui/components/loader-inline/loader-inline';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
 import styles from './app.css';
@@ -244,9 +245,7 @@ class Widget extends Component {
     if (!selectedYouTrack) {
       return (
         <div className={styles.widget}>
-          <p className={styles['message-l']}>
-            {'Loading...'}
-          </p>
+          <LoaderInline/>
         </div>
       );
     }
