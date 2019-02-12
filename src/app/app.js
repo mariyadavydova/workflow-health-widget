@@ -41,6 +41,25 @@ class Widget extends Component {
     }
   */
 
+  static getWidgetTitle =
+    (selectedYouTrack, youTracks, isConfiguring, counter) => {
+      const defaultTitle = 'Workflow Health';
+
+      if (isConfiguring) {
+        return defaultTitle;
+      }
+
+      const href = `${selectedYouTrack.homeUrl}/admin/workflows`;
+      if ((youTracks || []).length > 1) {
+        return {
+          text: `${defaultTitle} for ${selectedYouTrack.name || selectedYouTrack.homeUrl}`,
+          href,
+          counter
+        };
+      }
+      return {text: defaultTitle, href, counter};
+    };
+
   //-----LOADING-DATA-----//
 
   static propTypes = {
@@ -247,7 +266,9 @@ class Widget extends Component {
   //-----RENDERING-DATA-----//
 
   render() {
-    const {selectedYouTrack} = this.state;
+    const {
+      selectedYouTrack, youTracks, isConfiguring, brokenProjects
+    } = this.state;
 
     if (!selectedYouTrack) {
       return (
@@ -257,12 +278,18 @@ class Widget extends Component {
       );
     }
 
+    const brokenProjectsNumber =
+      brokenProjects ? brokenProjects.length : undefined;
+    const title = Widget.getWidgetTitle(
+      selectedYouTrack, youTracks, isConfiguring, brokenProjectsNumber
+    );
     return (
       <div className={styles.widget}>
         <ConfigurableWidget
-          isConfiguring={this.state.isConfiguring}
+          isConfiguring={isConfiguring}
           dashboardApi={this.props.dashboardApi}
           widgetLoader={this.state.isLoading}
+          widgetTitle={title}
           Configuration={this.renderConfiguration}
           Content={this.renderContent}
         />
