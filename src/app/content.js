@@ -36,19 +36,26 @@ export default class Content extends Component {
       map(withSortedWorkflows);
 
     function withSortedWorkflows(project) {
-      return Object.assign({}, project, {
+      return {
+        id: project.id,
+        ringId: project.ringId,
+        name: project.name,
         workflows: Object.keys(project.wfs).
           map(key => project.wfs[key]).
           map(withSortedProblems).
           sort(Content.sortByNameComparator)
-      });
+      };
     }
 
     function withSortedProblems(workflow) {
-      return Object.assign({}, workflow, {
+      return {
+        id: workflow.id,
+        loading: workflow.loading,
+        title: workflow.title,
+        name: workflow.name,
         problems: (workflow.problems || []).
           sort(Content.sortByNameComparator)
-      });
+      };
     }
   };
 
