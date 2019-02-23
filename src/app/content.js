@@ -1,12 +1,11 @@
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import Link from '@jetbrains/ring-ui/components/link/link';
-import Island, {Header, Content as IslandContent} from '@jetbrains/ring-ui/components/island/island';
 import LoaderInline from '@jetbrains/ring-ui/components/loader-inline/loader-inline';
-import Text from '@jetbrains/ring-ui/components/text/text';
 import EmptyWidget, {EmptyWidgetFaces} from '@jetbrains/hub-widget-ui/dist/empty-widget';
 import {
-  SuccessIcon
+  SuccessIcon,
+  WarningIcon
 } from '@jetbrains/ring-ui/components/icon';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
@@ -100,24 +99,20 @@ export default class Content extends Component {
 
   renderProject(project) {
     return (
-      <div key={`project-${project.id}`}>
-        <Island className={styles['red-island']}>
-          <Header border className={styles['red-island-header']}>
-            <Link
-              pseudo={false}
-              target={'_top'}
-              href={this.projectSettingsUrl(project.ringId)}
-            >
-              {project.name}
-            </Link>
-          </Header>
-          <IslandContent
-            className={styles['red-island-body']}
-            fade={false}
+      <div
+        key={`project-${project.id}`}
+        className={styles.project}
+      >
+        <div className={styles.projectHeader}>
+          <Link
+            pseudo={false}
+            target={'_top'}
+            href={this.projectSettingsUrl(project.ringId)}
           >
-            {this.renderWorkflows(project.workflows)}
-          </IslandContent>
-        </Island>
+            {project.name}
+          </Link>
+        </div>
+        {this.renderWorkflows(project.workflows)}
       </div>
     );
   }
@@ -141,8 +136,17 @@ export default class Content extends Component {
       <div>
         {workflows.map(workflow => (
           <div className={styles.widget} key={`workflow-${workflow.id}`}>
-            <p className={styles['wf-name']}>{Content.getName(workflow)}</p>
-            {this.renderProblems(workflow)}
+            <div className={styles.workflowName}>
+              <WarningIcon
+                className={styles.workflowNameIcon}
+                color={WarningIcon.Color.RED}
+                size={WarningIcon.Size.Size12}
+              />
+              {Content.getName(workflow)}
+            </div>
+            <div className={styles.errorList}>
+              {this.renderProblems(workflow)}
+            </div>
           </div>
         ))}
       </div>
@@ -152,21 +156,23 @@ export default class Content extends Component {
   renderProblems(workflow) {
     if (workflow.loading) {
       return (
-        <Text className={styles['message-s']}>
+        <div className={styles.errorListLine}>
           {'Loading...'}
-        </Text>
+        </div>
       );
     }
 
     return (
       <div>
-        <ul className={styles['error-list']}>
-          {workflow.problems.map(problem => (
-            <li key={`problem-${problem.id}`}>
-              <Text>{problem.message}</Text>
-            </li>
-          ))}
-        </ul>
+        {workflow.problems.map(problem => (
+          <div
+            key={`problem-${problem.id}`}
+            className={styles.errorListLine}
+            title={problem.message}
+          >
+            {problem.message}
+          </div>
+        ))}
       </div>
     );
   }

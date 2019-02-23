@@ -5,6 +5,7 @@ import ConfigurationForm from '@jetbrains/hub-widget-ui/dist/configuration-form'
 import ServiceSelect from '@jetbrains/hub-widget-ui/dist/service-select';
 import HttpErrorHandler from '@jetbrains/hub-widget-ui/dist/http-error-handler';
 
+import styles from './app.css';
 
 export default class Configuration extends Component {
 
@@ -60,14 +61,16 @@ export default class Configuration extends Component {
         onSave={this.submitForm}
         onCancel={this.props.onCancel}
       >
-        <ServiceSelect
-          className="ring-form__group"
-          serviceList={this.props.youTracks}
-          selectedService={selectedYouTrack}
-          onServiceSelect={this.changeYouTrack}
-          placeholder={'YouTrack Server'}
-          label={'YouTrack Server'}
-        />
+        <div className={styles.widgetForm}>
+          <ServiceSelect
+            className="ring-form__group"
+            serviceList={this.props.youTracks}
+            selectedService={selectedYouTrack}
+            onServiceSelect={this.changeYouTrack}
+            placeholder={'YouTrack Server'}
+            label={'YouTrack Server'}
+          />
+        </div>
       </ConfigurationForm>
     );
   }
