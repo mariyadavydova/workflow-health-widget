@@ -4,7 +4,6 @@ import Link from '@jetbrains/ring-ui/components/link/link';
 import LoaderInline from '@jetbrains/ring-ui/components/loader-inline/loader-inline';
 import EmptyWidget, {EmptyWidgetFaces} from '@jetbrains/hub-widget-ui/dist/empty-widget';
 import {
-  SuccessIcon,
   WarningIcon
 } from '@jetbrains/ring-ui/components/icon';
 
@@ -122,12 +121,7 @@ export default class Content extends Component {
       <EmptyWidget
         face={EmptyWidgetFaces.HAPPY}
         message={'Workflows are fine!'}
-      >
-        <SuccessIcon
-          color={SuccessIcon.Color.GREEN}
-          size={SuccessIcon.Size.Size14}
-        />
-      </EmptyWidget>
+      />
     );
   }
 
