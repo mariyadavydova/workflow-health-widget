@@ -208,7 +208,7 @@ class Widget extends Component {
         const problems = project.wfs[wfId].problems;
         usage.problems.forEach(usageProblem => {
           const exists = problems.some(
-            problem => problem.id === usageProblem.id
+            problem => problem.message === usageProblem.message
           );
           if (!exists) {
             problems.push(usageProblem);
