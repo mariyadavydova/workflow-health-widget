@@ -14,7 +14,7 @@ export default class Content extends Component {
 
   static getName = entity =>
     (typeof entity === 'object'
-      ? (entity.title || entity.name || '')
+      ? (entity.title || entity.name || entity.message || '')
       : (entity || ''));
 
   static sortByNameComparator = (a, b) => {
