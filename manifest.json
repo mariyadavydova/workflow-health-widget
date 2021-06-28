@@ -1,8 +1,8 @@
 {
   "key": "workflow-health",
   "name": "Workflow Health",
-  "version": "1.0.2",
-  "description": "Workflow configuration errors indicator.",
+  "version": "1.0.3",
+  "description": "Highlights errors in workflow configurations.",
   "author": "Mariya Davydova <mrs.mariya.davydova@gmail.com>",
   "homeUrl": "https://github.com/mariyadavydova/workflow-health-widget/issues",
   "applicationName": "YouTrack",

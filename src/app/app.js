@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import {render} from 'react-dom';
 import ConfigurableWidget from '@jetbrains/hub-widget-ui/dist/configurable-widget';
 import LoaderInline from '@jetbrains/ring-ui/components/loader-inline/loader-inline';
+import ServiceResources from '@jetbrains/hub-widget-ui/dist/service-resources';
 
 import 'file-loader?name=[name].[ext]!../../manifest.json'; // eslint-disable-line import/no-unresolved
 import styles from './app.css';
@@ -86,43 +87,38 @@ class Widget extends Component {
   }
 
   loadStatus(predefinedYouTrack) {
-    const fields = 'id,name,applicationName,homeUrl';
-    const query = 'applicationName:YouTrack';
-    const url = `api/rest/services?top=-1&fields=${fields}&query=${query}`;
+    ServiceResources.getYouTrackServices(this.props.dashboardApi).then(
+      youTracks => {
+        if (youTracks.length > 1) {
+          const selectedYouTrack = youTracks.filter(
+            yt => !predefinedYouTrack || yt.id === predefinedYouTrack.id
+          )[0];
+          const shouldSelectYouTrack = !predefinedYouTrack || !selectedYouTrack;
+          this.setState({
+            isConfiguring: shouldSelectYouTrack,
+            isLoading: !shouldSelectYouTrack,
+            selectedYouTrack,
+            youTracks
+          }, () =>
+            !shouldSelectYouTrack && this.loadPermissions(selectedYouTrack.id)
+          );
 
-    this.props.dashboardApi.fetchHub(url).then(response => {
-      const youTracks = ((response && response.services) || []).
-        filter(youtrack => !!youtrack.homeUrl);
-
-      if (youTracks.length > 1) {
-        const selectedYouTrack = predefinedYouTrack
-          ? youTracks.filter(yt => yt.id === predefinedYouTrack.id)[0]
-          : youTracks[0];
-        const shouldSelectYouTrack = !predefinedYouTrack || !selectedYouTrack;
-        this.setState({
-          isConfiguring: shouldSelectYouTrack,
-          isLoading: !shouldSelectYouTrack,
-          selectedYouTrack,
-          youTracks
-        }, () =>
-          !shouldSelectYouTrack && this.loadPermissions(selectedYouTrack.id)
-        );
-
-        this.props.registerWidgetApi({
-          onRefresh: () => this.loadStatus(),
-          onConfigure: () => this.setState({isConfiguring: true})
-        });
-      } else {
-        this.props.registerWidgetApi({
-          onRefresh: () => this.loadStatus()
-        });
-        this.setState({
-          isConfiguring: false,
-          selectedYouTrack: youTracks[0],
-          youTracks
-        }, () => this.loadPermissions(youTracks[0] && youTracks[0].id));
+          this.props.registerWidgetApi({
+            onRefresh: () => this.loadStatus(),
+            onConfigure: () => this.setState({isConfiguring: true})
+          });
+        } else {
+          this.props.registerWidgetApi({
+            onRefresh: () => this.loadStatus()
+          });
+          this.setState({
+            isConfiguring: false,
+            selectedYouTrack: youTracks[0],
+            youTracks
+          }, () => this.loadPermissions(youTracks[0] && youTracks[0].id));
+        }
       }
-    });
+    );
   }
 
   loadPermissions(ytServiceId) {
